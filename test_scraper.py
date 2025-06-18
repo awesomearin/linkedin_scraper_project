@@ -11,4 +11,4 @@ else:
     print("Title:", data["title"])
     print("Company:", data["company"])
     print("Location:", data["location"])
-    print("Description:\n", data["description"][:500] + "...")
+    print("Description:\n", data["description"] + "...")
