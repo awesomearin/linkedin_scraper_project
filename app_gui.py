@@ -6,6 +6,7 @@ from PyQt5.QtWidgets import (
 
 from linkedin_scraper import scrape_linkedin_job
 from resume_scraper import extract_text_from_pdf, manual_experience_entry
+from resume_matcher import match_resume_to_job
 
 class ResumeApp(QWidget):
     def __init__(self):
@@ -48,6 +49,16 @@ class ResumeApp(QWidget):
 
         self.layout.addWidget(self.manual_button)
 
+        self.match_button = QPushButton("Match Resume to Job")
+        self.match_button.clicked.connect(self.match_resume_to_job)
+        self.layout.addWidget(self.match_button)
+
+        self.match_output = QTextEdit()
+        self.match_output.setReadOnly(True)
+        self.layout.addWidget(QLabel("🎯 Resume Matching Result:"))
+        self.layout.addWidget(self.match_output)
+
+
         self.setLayout(self.layout)
 
     def show_error(self, message):
@@ -64,7 +75,7 @@ class ResumeApp(QWidget):
                 f"Title: {result['title']}\n"
                 f"Company: {result['company']}\n"
                 f"Location: {result['location']}\n\n"
-                f"Description:\n{result['description'][:1000]}..."
+                f"Description:\n{result['description']}..."
             )
             self.job_output.setText(job_info)
 
@@ -75,7 +86,26 @@ class ResumeApp(QWidget):
             if "error" in result:
                 self.show_error(result["error"])
             else:
-                self.resume_output.setText(result["text"][:3000])  # Preview
+                self.resume_output.setText(result["text"])  # Preview
+            
+    def match_resume_to_job(self):
+        job_text = self.job_output.toPlainText()
+        resume_text = self.resume_output.toPlainText()
+
+        if not job_text or not resume_text:
+            self.show_error("Please scrape a job and load a resume or experience first.")
+            return
+
+        # Remove label headers from preview text if present
+        clean_job = job_text.split("Description:")[-1]
+        result = match_resume_to_job(clean_job, resume_text)
+
+        output = f"✅ Match Score: {result['match_score']}%\n"
+        output += "\n✅ Matched Skills:\n" + ", ".join(result['matched_skills']) if result['matched_skills'] else "\n(No matches)"
+        output += "\n\n⚠️ Missing Skills:\n" + ", ".join(result['missing_skills']) if result['missing_skills'] else "\nNone!"
+
+        self.match_output.setText(output)
+
 
     def manual_entry(self):
         entry = manual_experience_entry()
