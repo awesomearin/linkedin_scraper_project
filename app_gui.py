@@ -7,6 +7,7 @@ from PyQt5.QtWidgets import (
 from linkedin_scraper import scrape_linkedin_job
 from resume_scraper import extract_text_from_pdf, manual_experience_entry
 from resume_matcher import match_resume_to_job
+from suggester import generate_skill_suggestions
 
 class ResumeApp(QWidget):
     def __init__(self):
@@ -57,6 +58,16 @@ class ResumeApp(QWidget):
         self.match_output.setReadOnly(True)
         self.layout.addWidget(QLabel("🎯 Resume Matching Result:"))
         self.layout.addWidget(self.match_output)
+        self.suggest_button = QPushButton("💡 Generate GPT Suggestions")
+
+        self.suggest_button.clicked.connect(self.generate_suggestions)
+        self.layout.addWidget(self.suggest_button)
+
+        self.suggestion_output = QTextEdit()
+        self.suggestion_output.setReadOnly(True)
+        self.layout.addWidget(QLabel("💬 AI Suggestions for Skill Gaps:"))
+        self.layout.addWidget(self.suggestion_output)
+
 
 
         self.setLayout(self.layout)
@@ -110,6 +121,24 @@ class ResumeApp(QWidget):
     def manual_entry(self):
         entry = manual_experience_entry()
         self.resume_output.setText(str(entry))
+
+    def generate_suggestions(self):
+        job_text = self.job_output.toPlainText()
+        resume_text = self.resume_output.toPlainText()
+
+        if not job_text or not resume_text:
+            self.show_error("You must match your resume to a job first.")
+            return
+
+        clean_job = job_text.split("Description:")[-1]
+        result = match_resume_to_job(clean_job, resume_text)
+
+        if not result["missing_skills"]:
+            self.suggestion_output.setText("✅ No missing skills detected!")
+            return
+
+        suggestions = generate_skill_suggestions(clean_job, result["missing_skills"])
+        self.suggestion_output.setText(suggestions)
 
 
 if __name__ == "__main__":
